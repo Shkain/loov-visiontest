@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Проверка зрения — LOOV</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --primary: #1A1A2E;
+    --accent: #4F46E5;
+    --accent-light: #EEF2FF;
+    --muted: #6B7280;
+    --border: #E5E7EB;
+    --success: #059669;
+    --warning: #D97706;
+    --danger: #DC2626;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--primary);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 420px;
+    min-height: 100dvh;
+    padding: 2rem 1.5rem;
+    animation: fadeIn 0.3s ease;
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .logo {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+    align-self: flex-start;
+  }
+
+  h1 { font-size: 26px; font-weight: 700; line-height: 1.25; margin-bottom: 0.75rem; }
+  h2 { font-size: 20px; font-weight: 600; margin-bottom: 0.5rem; }
+  p { font-size: 15px; color: var(--muted); line-height: 1.6; margin-bottom: 1rem; }
+
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    width: 100%;
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    border: none;
+    font-family: 'Manrope', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:active { transform: scale(0.98); background: #4338CA; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); margin-top: 0.75rem; }
+  .btn-outline:active { opacity: 0.7; }
+
+  .progress-bar {
+    width: 100%;
+    height: 3px;
+    background: var(--border);
+    border-radius: 99px;
+    margin-bottom: 2rem;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  /* CALIBRATION */
+  .cal-ruler {
+    width: 100%;
+    position: relative;
+    margin: 2rem 0 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .cal-line {
+    height: 3px;
+    background: var(--accent);
+    border-radius: 99px;
+    transition: width 0.05s;
+    position: relative;
+  }
+  .cal-line::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .cal-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+  .cal-label {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1rem;
+  }
+  .slider-row input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+  .slider-val {
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 48px;
+    text-align: right;
+    color: var(--accent);
+  }
+
+  /* TEST SCREEN */
+  #screen-test {
+    background: #000;
+  }
+  #screen-test .logo { color: #fff; opacity: 0.5; }
+
+  .eye-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 1rem;
+    align-self: flex-start;
+  }
+
+  .optotype-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: 2rem;
+  }
+
+  .optotype-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Кольцо Ландольта */
+  .landolt-ring {
+    position: relative;
+    border-radius: 50%;
+    border: solid white;
+    background: transparent;
+  }
+  .landolt-gap {
+    position: absolute;
+    background: #000;
+    right: -2px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .answer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    padding-bottom: 1rem;
+  }
+  .answer-btn {
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .answer-btn:active { background: rgba(79,70,229,0.4); border-color: var(--accent); transform: scale(0.96); }
+  .answer-btn svg { width: 28px; height: 28px; }
+
+  /* Letter mode */
+  .letter-display {
+    color: white;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .letter-keyboard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 100%;
+    padding-bottom: 1rem;
+  }
+  .key-btn {
+    padding: 14px 0;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.07);
+    color: white;
+    font-family: 'Manrope', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.1s;
+  }
+  .key-btn:active { background: rgba(79,70,229,0.4); border-color: var(--accent); transform: scale(0.96); }
+  .key-btn.cant-see {
+    grid-column: span 2;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    border-color: rgba(255,255,255,0.08);
+    background: transparent;
+  }
+
+  /* RESULT */
+  .result-eye {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .result-eye:last-child { border-bottom: none; }
+  .result-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+  .result-value { font-size: 22px; font-weight: 700; }
+  .result-value.good { color: var(--success); }
+  .result-value.warn { color: var(--warning); }
+  .result-value.bad { color: var(--danger); }
+
+  .result-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+  }
+  .badge-good { background: #D1FAE5; color: #065F46; }
+  .badge-warn { background: #FEF3C7; color: #92400E; }
+  .badge-bad { background: #FEE2E2; color: #991B1B; }
+
+  .cta-card {
+    background: var(--accent);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    color: white;
+    margin-top: 1rem;
+  }
+  .cta-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 0.4rem; }
+  .cta-card p { color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 1rem; }
+  .cta-card .btn { background: white; color: var(--accent); font-size: 15px; }
+
+  .instruction-step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  .step-num {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .step-text { font-size: 14px; color: var(--muted); line-height: 1.5; }
+
+  .mode-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    margin-bottom: 1rem;
+    align-self: center;
+  }
+  .mode-btn {
+    padding: 6px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Manrope', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mode-btn.active { background: rgba(255,255,255,0.15); color: white; }
+</style>
+</head>
+<body>
+
+<!-- SCREEN 1: WELCOME -->
+<div class="screen active" id="screen-welcome">
+  <div class="logo">LOOV</div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; width:100%;">
+    <div style="font-size:48px; margin-bottom:1rem;">👁</div>
+    <h1>Проверь зрение<br>за 3 минуты</h1>
+    <p>Ориентировочный тест остроты зрения прямо на телефоне. Не заменяет визит к врачу, но поможет понять, всё ли в порядке.</p>
+    <div class="card" style="margin-top:1rem;">
+      <div class="instruction-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Откалибруй экран по размеру банковской карты</div>
+      </div>
+      <div class="instruction-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Держи телефон на вытянутой руке (~60 см)</div>
+      </div>
+      <div class="instruction-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Проверь каждый глаз по очереди</div>
+      </div>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="showScreen('screen-calibrate')">Начать →</button>
+</div>
+
+<!-- SCREEN 2: CALIBRATION -->
+<div class="screen" id="screen-calibrate">
+  <div class="logo">LOOV</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:20%"></div></div>
+  <h2>Калибровка экрана</h2>
+  <p>Приложи банковскую карту к левому краю экрана вертикально и подгони линию так, чтобы она совпала с правым краем карты.</p>
+
+  <div class="cal-ruler">
+    <div class="cal-label" id="calMmLabel">85.6 мм</div>
+    <div class="cal-line" id="calLine" style="width:70%;"></div>
+  </div>
+
+  <div class="card">
+    <div class="slider-row">
+      <span style="font-size:13px; color:var(--muted); flex-shrink:0;">◀ короче / длиннее ▶</span>
+      <input type="range" id="calSlider" min="30" max="100" value="70" step="1" oninput="updateCalibration(this.value)">
+    </div>
+    <p style="font-size:13px; margin:0; color:var(--muted);">Правый конец линии должен точно совпасть с правым краем карты.</p>
+  </div>
+
+  <button class="btn btn-primary" onclick="finishCalibration()">Готово →</button>
+  <button class="btn btn-outline" onclick="skipCalibration()">Пропустить калибровку</button>
+</div>
+
+<!-- SCREEN 3: INSTRUCTION -->
+<div class="screen" id="screen-instruction">
+  <div class="logo">LOOV</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:40%"></div></div>
+  <h2 id="instrTitle">Правый глаз</h2>
+  <p id="instrSub">Держи телефон в <strong>левой руке</strong> на вытянутой руке (~60 см). Закрой левый глаз правой ладонью — не зажмуривай его.</p>
+  <div style="font-size:80px; margin:1.5rem 0; text-align:center;" id="instrEmoji">🫱</div>
+  <div class="card">
+    <p style="margin:0; font-size:14px;">Тебе будут показываться кольца или буквы. Отвечай, что видишь — даже если не уверен, угадывай.</p>
+  </div>
+  <div style="flex:1"></div>
+  <button class="btn btn-primary" onclick="startTest()">Начать тест →</button>
+</div>
+
+<!-- SCREEN 4: TEST -->
+<div class="screen" id="screen-test">
+  <div class="logo">LOOV</div>
+  <div class="progress-bar" style="background:rgba(255,255,255,0.1);">
+    <div class="progress-fill" id="testProgress" style="width:60%"></div>
+  </div>
+
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="modeRing" onclick="setMode('ring')">Кольца</button>
+    <button class="mode-btn" id="modeLetter" onclick="setMode('letter')">Буквы</button>
+  </div>
+
+  <div class="eye-label" id="eyeLabel">ПРАВЫЙ ГЛАЗ</div>
+
+  <div class="optotype-area">
+    <div class="optotype-display" id="optotypeDisplay"></div>
+  </div>
+
+  <div id="ringAnswers" class="answer-grid"></div>
+  <div id="letterAnswers" class="letter-keyboard" style="display:none;"></div>
+</div>
+
+<!-- SCREEN 5: SWITCH EYE -->
+<div class="screen" id="screen-switch">
+  <div class="logo">LOOV</div>
+  <div class="progress-bar"><div class="progress-fill" style="width:80%"></div></div>
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+    <div style="font-size:72px; margin-bottom:1.5rem;">🫲</div>
+    <h2>Теперь левый глаз</h2>
+    <p>Переложи телефон в <strong>правую руку</strong>, вытяни руку (~60 см). Закрой правый глаз левой ладонью.</p>
+  </div>
+  <button class="btn btn-primary" onclick="startLeftEye()">Продолжить →</button>
+</div>
+
+<!-- SCREEN 6: RESULT -->
+<div class="screen" id="screen-result">
+  <div class="logo">LOOV</div>
+  <div style="padding-top:1rem; width:100%;">
+    <h2 style="margin-bottom:0.5rem;">Результат теста</h2>
+    <p style="margin-bottom:1rem;">Ориентировочная острота зрения:</p>
+    <div class="card">
+      <div class="result-eye">
+        <div>
+          <div class="result-label">Правый глаз (OD)</div>
+        </div>
+        <div class="result-value" id="resultOD">—</div>
+      </div>
+      <div class="result-eye">
+        <div>
+          <div class="result-label">Левый глаз (OS)</div>
+        </div>
+        <div class="result-value" id="resultOS">—</div>
+      </div>
+    </div>
+
+    <div id="resultBadge" class="result-badge badge-good" style="margin-top:0.5rem;"></div>
+    <p id="resultText" style="font-size:14px;"></p>
+
+    <!-- Legenda -->
+    <div class="card" style="margin-top:0.5rem;">
+      <div style="font-size:12px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:0.75rem;">Что значат цифры?</div>
+      <p style="font-size:13px; margin-bottom:0.75rem;">Острота зрения (visus) — это насколько чётко ты видишь детали. Норма = <strong>1.0</strong>.</p>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+          <span style="width:10px; height:10px; border-radius:50%; background:var(--success); flex-shrink:0;"></span>
+          <span><strong>0.8–2.0</strong> — норма или выше нормы</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+          <span style="width:10px; height:10px; border-radius:50%; background:var(--warning); flex-shrink:0;"></span>
+          <span><strong>0.5–0.7</strong> — лёгкое снижение, стоит проверить</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:13px;">
+          <span style="width:10px; height:10px; border-radius:50%; background:var(--danger); flex-shrink:0;"></span>
+          <span><strong>ниже 0.5</strong> — значительное снижение</span>
+        </div>
+      </div>
+      <p style="font-size:11px; color:var(--muted); margin-top:0.75rem; margin-bottom:0; line-height:1.5;">Тест ориентировочный. На результат влияет освещение, усталость глаз и точность калибровки экрана.</p>
+    </div>
+
+    <div class="cta-card">
+      <h3>Проверь зрение у специалиста</h3>
+      <p>Онлайн-тест даёт только ориентир. Точный результат — только на профессиональном оборудовании.</p>
+      <button class="btn" onclick="alert('Переход на запись в LOOV')">Записаться на скрининг →</button>
+    </div>
+
+    <button class="btn" onclick="restartTest()" style="margin-top:1rem; background:transparent; color:var(--accent); border:1.5px solid var(--accent);">Пройти ещё раз</button>
+  </div>
+</div>
+
+<script>
+// ---- STATE ----
+const state = {
+  pxPerMm: 3.78,
+  mode: 'ring',
+  currentEye: 'right',
+  stepIndex: 0,
+  correctStreak: 0,
+  wrongCount: 0,
+  scores: { right: null, left: null },
+  answers: [],
+  testDone: false
+};
+
+// Шаги остроты: [visus, размер знака в угловых минутах → мм при 60 см]
+// При visus=1.0, угол=1' → размер детали ~0.175мм, знак ~0.875мм
+// distMm=600, angleMins=5/visus → sizeMm = 2*distMm*tan(angleMins*pi/180/60)
+const VISUS_STEPS = [0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.5, 2.0];
+const DIST_MM = 600;
+
+function visusToPx(visus) {
+  const angleMins = 5 / visus;
+  const sizeMm = 2 * DIST_MM * Math.tan(angleMins * Math.PI / 180 / 60);
+  return sizeMm * state.pxPerMm;
+}
+
+// Directions for Landolt C
+const DIRECTIONS = ['right', 'down', 'left', 'up', 'ur', 'ul', 'dr', 'dl'];
+const DIR_ANGLES = { right:0, dr:45, down:90, dl:135, left:180, ul:225, up:270, ur:315 };
+
+// Letters from Sivtsev table (unambiguous)
+const LETTERS = ['Ш','Б','М','Н','К','Ы','З','С','Д','Е'];
+
+// ---- CALIBRATION ----
+function updateCalibration(val) {
+  const line = document.getElementById('calLine');
+  line.style.width = val + '%';
+  // Show estimated mm based on screen width
+  const screenWidthPx = window.innerWidth;
+  const linePx = screenWidthPx * val / 100;
+  // We'll finalize px/mm on "done"
+}
+
+function finishCalibration() {
+  const slider = document.getElementById('calSlider');
+  const pct = parseFloat(slider.value) / 100;
+  const linePx = (document.getElementById('calLine').offsetWidth);
+  const cardWidthMm = 85.6;
+  state.pxPerMm = linePx / cardWidthMm;
+  showScreen('screen-instruction');
+}
+
+function skipCalibration() {
+  // Estimate from devicePixelRatio and screen
+  const dpr = window.devicePixelRatio || 2;
+  state.pxPerMm = (window.screen.width * dpr / 25.4) / dpr;
+  showScreen('screen-instruction');
+}
+
+// ---- SCREEN NAV ----
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ---- MODE TOGGLE ----
+function setMode(m) {
+  state.mode = m;
+  document.getElementById('modeRing').classList.toggle('active', m === 'ring');
+  document.getElementById('modeLetter').classList.toggle('active', m === 'letter');
+  document.getElementById('ringAnswers').style.display = m === 'ring' ? 'grid' : 'none';
+  document.getElementById('letterAnswers').style.display = m === 'letter' ? 'grid' : 'none';
+  renderStep();
+}
+
+// ---- TEST LOGIC ----
+function startTest() {
+  state.currentEye = 'right';
+  state.stepIndex = 6; // start at visus 0.5 (index 6 in new array)
+  state.correctStreak = 0;
+  state.wrongCount = 0;
+  state.answers = [];
+  document.getElementById('eyeLabel').textContent = 'ПРАВЫЙ ГЛАЗ';
+  showScreen('screen-test');
+  renderStep();
+}
+
+function startLeftEye() {
+  state.currentEye = 'left';
+  state.stepIndex = 6; // start at visus 0.5
+  state.correctStreak = 0;
+  state.wrongCount = 0;
+  state.answers = [];
+  document.getElementById('eyeLabel').textContent = 'ЛЕВЫЙ ГЛАЗ';
+  showScreen('screen-test');
+  renderStep();
+}
+
+let currentCorrectDir = null;
+let currentCorrectLetter = null;
+
+function renderStep() {
+  const visus = VISUS_STEPS[state.stepIndex];
+  const sizePx = visusToPx(visus);
+
+  if (state.mode === 'ring') {
+    renderLandolt(sizePx);
+    renderRingAnswers();
+  } else {
+    renderLetter(sizePx);
+    renderLetterKeyboard();
+  }
+
+  // update progress (test is 60-100% of total)
+  const pct = 60 + (state.stepIndex / VISUS_STEPS.length) * 20;
+  document.getElementById('testProgress').style.width = pct + '%';
+}
+
+function renderLandolt(sizePx) {
+  const dir = DIRECTIONS[Math.floor(Math.random() * 8)];
+  currentCorrectDir = dir;
+  const angle = DIR_ANGLES[dir];
+  const thickness = sizePx / 5;
+  const gap = sizePx / 5;
+
+  const display = document.getElementById('optotypeDisplay');
+  display.innerHTML = '';
+
+  const container = document.createElement('div');
+  container.style.cssText = `
+    width:${sizePx}px; height:${sizePx}px;
+    border-radius:50%;
+    border:${thickness}px solid white;
+    position:relative;
+    transform:rotate(${angle}deg);
+    flex-shrink:0;
+  `;
+
+  // Gap — white strip cut
+  const gapEl = document.createElement('div');
+  const gapW = gap + thickness * 0.5;
+  gapEl.style.cssText = `
+    position:absolute;
+    width:${gapW}px;
+    height:${thickness + 2}px;
+    background:#000;
+    right:-${gapW/2}px;
+    top:50%;
+    transform:translateY(-50%);
+  `;
+  container.appendChild(gapEl);
+  display.appendChild(container);
+}
+
+function renderRingAnswers() {
+  const grid = document.getElementById('ringAnswers');
+  grid.innerHTML = '';
+  const layout = [
+    'ul', 'up', 'ur',
+    'left', 'cant', 'right',
+    'dl', 'down', 'dr'
+  ];
+
+  layout.forEach(dir => {
+    const btn = document.createElement('div');
+    btn.className = 'answer-btn';
+
+    if (dir === 'cant') {
+      btn.innerHTML = `<span style="color:rgba(255,255,255,0.35);font-size:12px;font-weight:600;font-family:Manrope,sans-serif;">Не вижу</span>`;
+      btn.onclick = () => handleAnswer(false);
+    } else {
+      const angle = DIR_ANGLES[dir];
+      btn.innerHTML = `<svg viewBox="0 0 32 32" fill="none">
+        <g transform="rotate(${angle}, 16, 16)">
+          <path d="M8 16 L24 16 M18 10 L24 16 L18 22" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+      </svg>`;
+      btn.onclick = () => handleAnswer(dir === currentCorrectDir);
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function renderLetter(sizePx) {
+  const letter = LETTERS[Math.floor(Math.random() * LETTERS.length)];
+  currentCorrectLetter = letter;
+  const display = document.getElementById('optotypeDisplay');
+  display.innerHTML = `<div class="letter-display" style="font-size:${sizePx}px;">${letter}</div>`;
+}
+
+function renderLetterKeyboard() {
+  const kb = document.getElementById('letterAnswers');
+  kb.innerHTML = '';
+
+  // Shuffle letters for display, include correct
+  let pool = [...LETTERS].sort(() => Math.random()-0.5).slice(0,7);
+  if (!pool.includes(currentCorrectLetter)) { pool[0] = currentCorrectLetter; pool.sort(()=>Math.random()-0.5); }
+
+  pool.forEach(l => {
+    const btn = document.createElement('button');
+    btn.className = 'key-btn';
+    btn.textContent = l;
+    btn.onclick = () => handleAnswer(l === currentCorrectLetter);
+    kb.appendChild(btn);
+  });
+
+  // Can't see
+  const cant = document.createElement('button');
+  cant.className = 'key-btn cant-see';
+  cant.textContent = 'Не вижу';
+  cant.onclick = () => handleAnswer(false);
+  kb.appendChild(cant);
+}
+
+function handleAnswer(correct) {
+  state.answers.push({ visus: VISUS_STEPS[state.stepIndex], correct });
+
+  if (correct) {
+    state.correctStreak++;
+    state.wrongCount = 0;
+    if (state.correctStreak >= 2) {
+      // Move harder
+      state.correctStreak = 0;
+      if (state.stepIndex < VISUS_STEPS.length - 1) {
+        state.stepIndex++;
+        renderStep();
+      } else {
+        finishEye();
+      }
+    } else {
+      renderStep();
+    }
+  } else {
+    state.wrongCount++;
+    state.correctStreak = 0;
+    if (state.wrongCount >= 2) {
+      // This visus is the limit
+      finishEye();
+    } else {
+      renderStep();
+    }
+  }
+}
+
+function finishEye() {
+  // Find highest visus with 2 correct
+  let bestVisus = 0.1;
+  const visusCounts = {};
+  state.answers.forEach(a => {
+    if (!visusCounts[a.visus]) visusCounts[a.visus] = { correct:0, total:0 };
+    visusCounts[a.visus].total++;
+    if (a.correct) visusCounts[a.visus].correct++;
+  });
+  Object.entries(visusCounts).forEach(([v, c]) => {
+    if (c.correct >= 2) bestVisus = Math.max(bestVisus, parseFloat(v));
+  });
+
+  state.scores[state.currentEye] = bestVisus;
+
+  if (state.currentEye === 'right') {
+    showScreen('screen-switch');
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  const od = state.scores.right;
+  const os = state.scores.left;
+
+  const fmt = v => v >= 1.0 ? v.toFixed(1) : v.toFixed(1);
+
+  const elOD = document.getElementById('resultOD');
+  const elOS = document.getElementById('resultOS');
+
+  elOD.textContent = fmt(od);
+  elOS.textContent = fmt(os);
+
+  const classify = v => v >= 0.8 ? 'good' : v >= 0.5 ? 'warn' : 'bad';
+  elOD.className = 'result-value ' + classify(od);
+  elOS.className = 'result-value ' + classify(os);
+
+  const worst = Math.min(od, os);
+  const badge = document.getElementById('resultBadge');
+  const text = document.getElementById('resultText');
+
+  if (worst >= 0.8) {
+    badge.className = 'result-badge badge-good';
+    badge.textContent = '✓ Зрение в норме';
+    text.textContent = 'Результат теста в пределах нормы. Рекомендуем проходить профессиональный осмотр раз в год.';
+  } else if (worst >= 0.5) {
+    badge.className = 'result-badge badge-warn';
+    badge.textContent = '⚠ Стоит проверить';
+    text.textContent = 'Есть небольшое снижение остроты зрения. Рекомендуем пройти профессиональную диагностику.';
+  } else {
+    badge.className = 'result-badge badge-bad';
+    badge.textContent = '↓ Рекомендуем обратиться к специалисту';
+    text.textContent = 'Острота зрения ниже нормы. Это предварительный тест — для точного диагноза нужна профессиональная диагностика.';
+  }
+
+  showScreen('screen-result');
+}
+
+function restartTest() {
+  state.scores = { right: null, left: null };
+  showScreen('screen-welcome');
+}
+</script>
+</body>
+</html>
